@@ -9,6 +9,7 @@ public class Cell {
         this.value = value;
         if (value >= 1 && value <= 9) {
             this.isNull = false;
+            this.value = value;
         }
         this.row = row;
         this.col = col;
@@ -21,7 +22,8 @@ public class Cell {
         this.numPossibleValues = 9;
     }
     void removePossibleValue(int value) {
-        if (value >= 1 && value <= 9) {
+        // if (value >= 1 && value <= 9 && this.possibleValues[value-1] >= 1 && this.possibleValues[value-1] <= 9)
+        if (value >= 1 && value <= 9 && this.possibleValues[value-1] == value) {
             this.possibleValues[value-1] = -99;
             this.numPossibleValues -= 1;
         }
@@ -32,6 +34,9 @@ public class Cell {
     public void setValue(int new_value) {
         this.value = new_value;
         if (this.value >= 1 && this.value <= 9) this.isNull = false;
+    }
+    public int[] getPossibleValues() {
+        return this.possibleValues;
     }
     public boolean getIsNull() {
         return this.isNull;
