@@ -15,17 +15,24 @@ public class Cell {
         this.col = col;
         this.initPossibleValues();
     }
-    void initPossibleValues() {
+    public void initPossibleValues() {
         for (int i=0; i<9; i++) {
             this.possibleValues[i] = i+1;
         }
         this.numPossibleValues = 9;
     }
-    void removePossibleValue(int value) {
+    public void removePossibleValue(int value) {
         // if (value >= 1 && value <= 9 && this.possibleValues[value-1] >= 1 && this.possibleValues[value-1] <= 9)
         if (value >= 1 && value <= 9 && this.possibleValues[value-1] == value) {
-            this.possibleValues[value-1] = -99;
+            this.possibleValues[value-1] = -1;
             this.numPossibleValues -= 1;
+        }
+        if (this.numPossibleValues == 1) {
+            for (int i=0; i<9; i++) {
+                if (this.possibleValues[i] == i+1) {
+                    this.setValue(i+1);
+                }
+            }
         }
     }
     public int getValue() {

@@ -5,24 +5,25 @@ import java.util.Scanner;
 
 public class Board {
     Cell[][] board = new Cell[9][9];
-    static int num_solved_boards;
+    static int num_solved_boards = 0;
     static Queue<Board> boards_to_test;
-    static Queue<Board> solved_boards;
+    // static Queue<Board> solved_boards;
+    Board solved_board;
+    boolean is_original = true; // if this board represents the original inputted board
 
-    void init_board() {
+    public void init_board() {
         for (int i=0; i<9; i++) {
             for (int j=0; j<9; j++) {
                 board[i][j] = new Cell(i, j, -1);
             }
         }
-        num_solved_boards = 0;
     }
 
     public Board() {
         init_board();
     }
 
-    int getCellValue(int row, int col) {
+    public int getCellValue(int row, int col) {
         return board[row][col].getValue();
     }
 
@@ -36,17 +37,17 @@ public class Board {
     }
     */
 
-    boolean isCellNull(int row, int col) {
+    public boolean isCellNull(int row, int col) {
         return board[row][col].getIsNull();
     }
 
-    void setCellValue(int row, int col, int new_value) {
+    public void setCellValue(int row, int col, int new_value) {
         if (new_value >= 1 && new_value <= 9) {
             board[row][col].setValue(new_value);
         }
     }
 
-    void makeBoard() {
+    public void makeBoard() {
         for (int row=0; row<9; row++) {
             int curr_col = 0;
             Scanner row_reader = new Scanner(System.in);
@@ -107,10 +108,20 @@ public class Board {
         return true;
     }
 
-    boolean validate_board() {
+    public boolean validate_board() {
         for (int i=0; i<9; i++) {
             for (int j = 0; j < 9; j++) { // first 3x3 box
                 if (!validate_cell(board[i][j])) {
+                    return false;
+                }
+            }
+        }
+        return true;
+    }
+    public boolean equals(Board board2) {
+        for (int i=0; i<9; i++) {
+            for (int j=0; j<9; j++) {
+                if (this.board[i][j].getValue() != board2.board[i][j].getValue()) {
                     return false;
                 }
             }
@@ -140,13 +151,7 @@ public class Board {
                 }
             }
         }
-        if (cell.getNumPossibleValues() == 1) { // if only 1 possible value, set cell to that value
-            for (int i=0; i<9; i++) {
-                if (cell.getPossibleValues()[i] >= 1 && cell.getPossibleValues()[i] <= 9) { // find the possible value and set the cell's value to it
-                    cell.setValue(cell.getPossibleValues()[i]);
-                }
-            }
-        }
+        // removePossibleValues() also takes care of setting a cell to a value if it has only 1 possible value
     }
 
     public void narrowBoardCandidates() {
@@ -159,7 +164,6 @@ public class Board {
     }
 
     public Board boardWithNarrowedCandidates() {
-
         if (!validate_board()) return null;
         Board narrowedBoard = this;
         narrowedBoard.narrowBoardCandidates();
@@ -169,6 +173,28 @@ public class Board {
     // it correctly adds 9 to R2C4, 6 to R2C9, 7 to R3C3, 5 to R3C6, 8 to R3C8, 4 to R4C1, 6 to R4C2, 3 to R4C5,
     // 5 to R5C4, 2 to R7C3 (since 7 is previously added to R3C3), 1 to R7C5, 6 to R7C6, 9 to R8C6, 4 to R9C3,
     // 8 to R9C7 and 1 to R9C8
+
+    public void fullyNarrowCandidates() {
+        if (this == null) return;
+        Board board2 = this.boardWithNarrowedCandidates();
+        while (this != board2) { //TODO this part doesn't seem to be working properly,
+            // cause when I call a narrowing candidate method again, it narrows more candidates
+            // for example, in 5th row 6th column, you can remove a 9 from possible values and only end up with 7
+            // and if I call another narrowing method, it does indeed remove the 9 from possible values of board[4][5]
+            // and sets its value to 7
+            // I can call candidate-narrowing methods multiple times and it can still narrow candidates each time
+            this.narrowBoardCandidates();
+            board2.narrowBoardCandidates();
+        }
+        // this.narrowBoardCandidates();
+    }
+
+    public Board boardWithFullyNarrowedCandidates() {
+        Board board2 = this;
+        board2.fullyNarrowCandidates();
+
+        return board2;
+    }
 
     public boolean isCompletelySolved() {
         for (int i=0; i<9; i++) {
@@ -182,7 +208,7 @@ public class Board {
     }
 
     public Board solveBoard() {
-        if (this.validate_board() == false && num_solved_boards == 0) {
+        if (this.validate_board() == false && this.is_original == true) {
             System.out.println("Invalid original board");
             return null;
 
@@ -198,17 +224,18 @@ public class Board {
                     return this;
                 } else {
                     num_solved_boards++;
+                    solved_board = this;
                     if (num_solved_boards > 1) {
-                        System.out.println("Multiple possible solutions found. Here is one: \n" + this);
+                        System.out.println("Multiple possible solutions found. Here is one: \n" + solved_board);
                         return this;
                     }
                 }
             }
             boards_to_test.add(this);
-            while (!(boards_to_test.isEmpty())) {
+            while (!(boards_to_test.isEmpty())) { // TODO do we need to add a "num_solved_boards < 2" condition here?
 
                 Board new_guessed_board = boards_to_test.poll();
-                new_guessed_board.narrowBoardCandidates();
+                new_guessed_board.fullyNarrowCandidates();
 
                 for (int i = 0; i < 9; i++) {
                     for (int j = 0; j < 9; j++) {
@@ -220,7 +247,7 @@ public class Board {
                 }
 
                 if (num_solved_boards > 1) {
-                    System.out.println("Multiple possible solutions found. Here is one: \n " + solved_boards.peek());
+                    System.out.println("Multiple possible solutions found. Here is one: \n " + solved_board);
                     return null;
                 }
 
@@ -230,10 +257,53 @@ public class Board {
             System.out.println("No possible solutions found");
             return null;
         }
-        System.out.println("Solved board: \n" + solved_boards.peek());
-        return solved_boards.poll();
+        System.out.println("Solved board: \n" + solved_board);
+        return solved_board;
         // we already took care of the case where we have more than 1 possible solution inside the while loop
 
+    }
+
+    public static Board makeTestBoard1() {
+        Board test_board_1 = new Board();
+        test_board_1.setCellValue(0, 1, 2);
+        test_board_1.setCellValue(1, 0, 1);
+        test_board_1.setCellValue(1, 1, 5);
+        test_board_1.setCellValue(1, 2, 8);
+        test_board_1.setCellValue(1, 7, 3);
+        test_board_1.setCellValue(2, 0, 3);
+        test_board_1.setCellValue(2, 1, 4);
+        test_board_1.setCellValue(2, 3, 1);
+        test_board_1.setCellValue(2, 4, 6);
+        test_board_1.setCellValue(2, 6, 9);
+        test_board_1.setCellValue(2, 8, 2);
+        test_board_1.setCellValue(3, 2, 9);
+        test_board_1.setCellValue(3, 3, 2);
+        test_board_1.setCellValue(3, 5, 8);
+        test_board_1.setCellValue(3, 6, 1);
+        test_board_1.setCellValue(3, 7, 7);
+        test_board_1.setCellValue(3, 8, 5);
+        test_board_1.setCellValue(4, 4, 4);
+        test_board_1.setCellValue(5, 1, 3);
+        test_board_1.setCellValue(5, 2, 5);
+        test_board_1.setCellValue(5, 3, 6);
+        test_board_1.setCellValue(5, 5, 1);
+        test_board_1.setCellValue(6, 3, 3);
+        test_board_1.setCellValue(6, 6, 5);
+        test_board_1.setCellValue(6, 7, 9);
+        test_board_1.setCellValue(6, 8, 4);
+        test_board_1.setCellValue(7, 0, 5);
+        test_board_1.setCellValue(7, 1, 1);
+        test_board_1.setCellValue(7, 2, 3);
+        test_board_1.setCellValue(7, 3, 4);
+        test_board_1.setCellValue(7, 4, 8);
+        test_board_1.setCellValue(7, 8, 7);
+        test_board_1.setCellValue(8, 0, 6);
+        test_board_1.setCellValue(8, 1, 9);
+        test_board_1.setCellValue(8, 3, 7);
+        test_board_1.setCellValue(8, 4, 5);
+        test_board_1.setCellValue(8, 5, 2);
+        test_board_1.setCellValue(8, 8, 3);
+        return test_board_1;
     }
 
     /* public Board solveBoard() {
