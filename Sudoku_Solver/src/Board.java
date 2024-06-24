@@ -9,7 +9,8 @@ public class Board {
     static Queue<Board> boards_to_test;
     // static Queue<Board> solved_boards;
     Board solved_board;
-    boolean is_original = true; // if this board represents the original inputted board
+    static Board original_board;
+    // boolean is_original = true; // if this board represents the original inputted board
 
     public void init_board() {
         for (int i=0; i<9; i++) {
@@ -21,6 +22,7 @@ public class Board {
 
     public Board() {
         init_board();
+        original_board = this;
     }
 
     public int getCellValue(int row, int col) {
@@ -208,7 +210,7 @@ public class Board {
     }
 
     public Board solveBoard() {
-        if (this.validate_board() == false && this.is_original == true) {
+        if (this.validate_board() == false && this == original_board) {
             System.out.println("Invalid original board");
             return null;
 
