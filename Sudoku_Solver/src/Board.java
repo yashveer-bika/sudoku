@@ -1,3 +1,5 @@
+package org.sudoku;
+
 // import java.lang.String;
 import java.util.Queue;
 import java.util.Scanner;

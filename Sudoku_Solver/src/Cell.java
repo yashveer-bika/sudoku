@@ -1,3 +1,7 @@
+package org.sudoku;
+
+import java.util.Arrays;
+
 public class Cell {
     int value;
     int row;
@@ -15,6 +19,19 @@ public class Cell {
         this.col = col;
         this.initPossibleValues();
     }
+
+    public boolean equals(Cell cell) {
+
+        return this.value == cell.value
+                && this.row == cell.row
+                && this.col == cell.col
+                && this.isNull == cell.isNull
+                && this.numPossibleValues == cell.numPossibleValues
+                && this.row == cell.row
+                && Arrays.equals(this.possibleValues, cell.possibleValues)
+                ;
+    }
+
     public void initPossibleValues() {
         for (int i=0; i<9; i++) {
             this.possibleValues[i] = i+1;
