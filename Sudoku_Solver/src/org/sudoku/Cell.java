@@ -31,30 +31,9 @@ public class Cell {
         this.setNumPossibleValues(other.getNumPossibleValues());
         // System.arraycopy(other.possibleValues, 0, this.possibleValues, 0, 9);
         this.possibleValues = other.possibleValues.clone();
-        /* for (int i=0; i<9; i++) {
-            this.possibleValues[i] = other.possibleValues[i];
-        }
 
-         */
     }
-
-
-    /*
-    @Override
-    public Cell clone() throws CloneNotSupportedException {
-        Object obj = super.clone();
-        Cell newCell = (Cell) obj;
-        // now to deep clone mutable fields, which is just possibleValues in this class
-        for (int i=0; i<9; i++) {
-            newCell.possibleValues[i] = this.possibleValues[i];
-        }
-        return newCell;
-    }
-
-     */
-
     public boolean equals(Cell cell) {
-
         return this.value == cell.value
                 && this.row == cell.row
                 && this.col == cell.col

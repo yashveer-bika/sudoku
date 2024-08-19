@@ -1,21 +1,14 @@
 package org.sudoku;
 
-// import java.lang.String;
-import java.util.AbstractQueue;
-import java.util.LinkedList;
-import java.util.Queue;
+
 import java.util.Scanner;
 
 
 public class Board {
     Cell[][] board_cells = new Cell[9][9];
-    static int num_solved_boards = 0;
-    static Queue<Board> boards_to_test = new LinkedList<Board>();
     public boolean is_valid = true;
-    // static Queue<Board> solved_boards;
-    Board solved_board;
-    static Board original_board;
-    // boolean is_original = true; // if this board represents the original inputted board
+    static Board original_board = null;
+    static Board solved_board = null; // used to represent the solved board if there is only 1 possible, or a solved board if another solution is found
 
     public void init_board() {
         for (int i=0; i<9; i++) {
@@ -27,6 +20,9 @@ public class Board {
 
     public Board() {
         init_board();
+        if (original_board == null) {
+            original_board = this;
+        }
         // original_board = this;
     }
 
@@ -108,8 +104,7 @@ public class Board {
         for (int i=3*boxRowWise; i < 3*boxRowWise + 3; i++) {
             for (int j=3*boxColWise; j < 3*boxColWise + 3; j++) { // checking all cells in the 3x3 box of the subject cell
                 if (i != cell.getRow() && j != cell.getCol() && board_cells[i][j].getValue() == cell.getValue()) {
-                    return false; // this returns false if any cells in the same 3x3 box as the subject cell
-                    // have the same value
+                    return false; // this returns false if any cells in the same 3x3 box as the subject cell have the same value
                 }
             }
         }
@@ -130,9 +125,7 @@ public class Board {
 
     public boolean samePossibleValueInRow(Cell cell, int target_value) { // returns true if another cell has a possible value of target_value in the same row as the target cell
         if (!(target_value >= 1 && target_value <= 9)) return false;
-        // if (!(cell.containsPossibleValue(target_value))) return false;
         if (cell.getValue() == target_value) return false;
-        // now we know that cell.possibleValues[value-1] == value past this point
         if (numCellsWithPossibleValueInRow(cell.getRow(), target_value) == 1) { // this cell is the only one in its row with target_value as a possible value
             return false;
         }
@@ -202,14 +195,14 @@ public class Board {
         return -1;
     }
 
-    public boolean setPossibleValueIfUnique(Cell cell) { // set a cell to a value if
+    public void setPossibleValueIfUnique(Cell cell) { // set a cell to a value if
         // it is the only cell in a row, column, or box that can have a specific value
         // returns true if a value was set this way or false otherwise
-        if (cell.getIsSolved()) return false; // this cell is already filled in
+        if (cell.getIsSolved()) return; // this cell is already filled in
         if (UniquePossibleValue(cell) != -1) { // this cell has a possible value that is unique to its row, column, and/or box
             cell.setValue(UniquePossibleValue(cell));
-            return true;
-        } else return false; // this cell doesn't have a unique possible value for its row, column, or box, so do nothing
+        }
+        // if a cell didn't have a unique possible value set this way, it doesn't have a unique possible value for its row, column, or box, so do nothing
     }
 
     public boolean validate_board() {
@@ -229,12 +222,6 @@ public class Board {
         }
         for (int i=0; i<9; i++) {
             for (int j=0; j<9; j++) {
-                /* if (this.board_cells[i][j].getValue() != board2.board_cells[i][j].getValue()) {
-                    return false;
-                }
-
-                 */
-                //TODO does this next part go here?
                 if (!(this.board_cells[i][j].equals(board2.board_cells[i][j]))) return false;
             }
         }
@@ -243,7 +230,7 @@ public class Board {
 
     public void narrowCellCandidates(Cell cell) {
         if (cell.getIsSolved()) {
-            return; // don't want to focus on candidates of already solved or prefilled cells
+            return;
         }
 
         for (int k=0; k<9; k++) {
@@ -279,9 +266,8 @@ public class Board {
     }
 
 
-    public Board boardWithNarrowedCandidates() {
+    public Board boardWithNarrowedCandidates() { // used if I want to have a separate Board object representing an original Board object with narrowBoardCandidates() applied
         if (!validate_board()) return null;
-        //TODO does this previous line belong here?
         Board narrowedBoard = this.deepCopy();
         narrowedBoard.narrowBoardCandidates();
         return narrowedBoard;
@@ -292,46 +278,25 @@ public class Board {
         if (this == null) return;
         if (!(this.validate_board())) return;
         Board board2 = this.deepCopy().boardWithNarrowedCandidates();
-        // if (board2 == null) return;
-        while (!(this.equals(board2))) { //TODO this part doesn't seem to be working properly,
-            // cause when I call a narrowing candidate method again, it narrows more candidates
-            // for example, in 5th row 6th column, you can remove a 9 from possible values and only end up with 7
-            // and if I call another narrowing method, it does indeed remove the 9 from possible values of board[4][5]
-            // and sets its value to 7
-            // I can call candidate-narrowing methods multiple times and it can still narrow candidates each time
+        while (!(this.equals(board2))) {
             if (!(this.equals(this.boardWithNarrowedCandidates()))) {
                 this.narrowBoardCandidates();
             } else break;
-            // this.narrowBoardCandidates();
             board2.narrowBoardCandidates();
         }
-        // this.narrowBoardCandidates();
     }
-    /* public static void fullyNarrowCandidates(Board board) {
-        if (board==null) return;
-        Board board2 = board.deepCopy().boardWithNarrowedCandidates();
-        while (!(board == board2)) {
-            narrowBoardCandidates(board);
-            narrowBoardCandidates(board2);
-        }
-    }
-     */
 
-    public Board boardWithFullyNarrowedCandidates() {
+
+    public Board boardWithFullyNarrowedCandidates() { // used if I want to have a separate Board object representing an original Board object with fullyNarrowCandidates() applied
         Board board2 = this.deepCopy();
         board2.fullyNarrowCandidates();
-        /*
-        Board board2 = this.deepCopy();
-        fullyNarrowCandidates(board2);
-         */
-
         return board2;
     }
 
     public boolean isCompletelySolved() {
         for (int i=0; i<9; i++) {
             for (int j=0; j<9; j++) {
-                if (this.board_cells[i][j].getIsSolved() == false) {
+                if (!(this.board_cells[i][j].getIsSolved())) {
                     return false;
                 }
             }
@@ -363,30 +328,27 @@ public class Board {
     }
 
     public Board solveBoard() {
-
-        if (this.validate_board() == false && original_board == null) {
-            System.out.println("Invalid original board");
+        if (!(original_board.validate_board())) {
+            System.out.println("Invalid original board\n");
             return null;
-        } else if (original_board == null) {
-            if (this.isCompletelySolved()) {
-                System.out.println("Board already completely solved!");
-                return this;
-            } else {
-                original_board = this.deepCopy();
-                boards_to_test.add(this);
-            }
-        } else if (!(this.validate_board())) {
+        }
+        if (!(this.validate_board())) {
             return null;
+        }
+        if (original_board.isCompletelySolved()) {
+            System.out.println("Board already completely solved!\n");
+            return original_board;
         }
 
         this.fullyNarrowCandidates();
         if (!(this.validate_board())) return null;
         if (this.isCompletelySolved()) {
-            /* solved_board = this.deepCopy();
-            num_solved_boards++;
-
-             */
-            return this;
+            if (solved_board != null && !(this.equals(solved_board))) {
+                System.out.println("Multiple possible solutions found. Here is one:\n" + this.toString());
+            } else {
+                solved_board = this;
+            }
+            return solved_board;
         }
         else {
             Board newBoard = this.deepCopy();
@@ -400,258 +362,204 @@ public class Board {
             } else return newBoard.solveBoard();
 
         }
-        /*
-
-        for (int i=0; i<9; i++) {
-            for (int j=0; j<9; j++) {
-                if (!(this.board_cells[i][j]).getIsSolved()) {
-                    Board newBoard = this.deepCopy();
-                    newBoard.board_cells[i][j].setValue(newBoard.board_cells[i][j].getFirstPossibleValue());
-                    if (newBoard.solveBoard() == null) {
-                        this.board_cells[i][j].removePossibleValue(newBoard.board_cells[i][j].getFirstPossibleValue());
-                    } else {
-                        // num_solved_boards++;
-                        // solved_board = newBoard.solveBoard();
-                        return newBoard.solveBoard();
-                    }
-                }
-            }
-        }
-
-        while (!(boards_to_test.isEmpty())) {
-
-        }
-        */
-
-        /*
-
-        if (this.validate_board() == false) {
-            if (!(boards_to_test.isEmpty())) {
-                boards_to_test.poll().solveBoard();
-                //TODO ask do I return this previous line or just call the function?
-            }
-        } else {
-            if (this.isCompletelySolved()) {
-                num_solved_boards++;
-                solved_board = this;
-                if (num_solved_boards > 1) {
-                    System.out.println("Multiple possible solutions found. Here is one: \n" + solved_board);
-                    return this;
-                }
-            } else {
-                boards_to_test.add(this);
-            }
-        }
-        while (!(boards_to_test.isEmpty())) { // TODO do we need to add a "num_solved_boards < 2" condition here?
-
-            Board new_guessed_board = boards_to_test.poll();
-            new_guessed_board.fullyNarrowCandidates();
-
-            for (int i = 0; i < 9; i++) {
-                for (int j = 0; j < 9; j++) {
-                    if (new_guessed_board.isCellNull(i, j)) {
-                        new_guessed_board.setCellValue(i, j, new_guessed_board.board_cells[i][j].getFirstPossibleValue()); // new board with a guessed value filled in
-                        boards_to_test.add(new_guessed_board);
-                        if (new_guessed_board.solveBoard() == null) {
-                            this.board_cells[i][j].removePossibleValue(new_guessed_board.board_cells[i][j].getFirstPossibleValue());
-                            //TODO does this incorrectly affect the candidates on the whole board in just a specific solution?
-                        };
-                    }
-                }
-            }
-
-            if (num_solved_boards > 1) {
-                System.out.println("Multiple possible solutions found. Here is one: \n " + solved_board);
-                return null;
-            }
-        }
-
-         */
-
-        /* if (num_solved_boards == 0) {
-            System.out.println("No possible solutions found");
-            return null;
-        }
-
-         */
-
-
-        /* System.out.println("Solved board: \n" + solved_board);
-        return solved_board;
-        // we already took care of the case where we have more than 1 possible solution inside the while loop
-
-
-         */
-        // return solved_board;
     }
 
 
     public static Board makeTestBoard1() { // Easy difficulty in Sudoku.com app
-        Board test_board_1 = new Board();
-        test_board_1.setCellValue(0, 1, 2);
-        test_board_1.setCellValue(1, 0, 1);
-        test_board_1.setCellValue(1, 1, 5);
-        test_board_1.setCellValue(1, 2, 8);
-        test_board_1.setCellValue(1, 7, 3);
-        test_board_1.setCellValue(2, 0, 3);
-        test_board_1.setCellValue(2, 1, 4);
-        test_board_1.setCellValue(2, 3, 1);
-        test_board_1.setCellValue(2, 4, 6);
-        test_board_1.setCellValue(2, 6, 9);
-        test_board_1.setCellValue(2, 8, 2);
-        test_board_1.setCellValue(3, 2, 9);
-        test_board_1.setCellValue(3, 3, 2);
-        test_board_1.setCellValue(3, 5, 8);
-        test_board_1.setCellValue(3, 6, 1);
-        test_board_1.setCellValue(3, 7, 7);
-        test_board_1.setCellValue(3, 8, 5);
-        test_board_1.setCellValue(4, 4, 4);
-        test_board_1.setCellValue(5, 1, 3);
-        test_board_1.setCellValue(5, 2, 5);
-        test_board_1.setCellValue(5, 3, 6);
-        test_board_1.setCellValue(5, 5, 1);
-        test_board_1.setCellValue(6, 3, 3);
-        test_board_1.setCellValue(6, 6, 5);
-        test_board_1.setCellValue(6, 7, 9);
-        test_board_1.setCellValue(6, 8, 4);
-        test_board_1.setCellValue(7, 0, 5);
-        test_board_1.setCellValue(7, 1, 1);
-        test_board_1.setCellValue(7, 2, 3);
-        test_board_1.setCellValue(7, 3, 4);
-        test_board_1.setCellValue(7, 4, 8);
-        test_board_1.setCellValue(7, 8, 7);
-        test_board_1.setCellValue(8, 0, 6);
-        test_board_1.setCellValue(8, 1, 9);
-        test_board_1.setCellValue(8, 3, 7);
-        test_board_1.setCellValue(8, 4, 5);
-        test_board_1.setCellValue(8, 5, 2);
-        test_board_1.setCellValue(8, 8, 3);
-        return test_board_1;
+        Board test_board = new Board();
+        test_board.setCellValue(0, 1, 2);
+        test_board.setCellValue(1, 0, 1);
+        test_board.setCellValue(1, 1, 5);
+        test_board.setCellValue(1, 2, 8);
+        test_board.setCellValue(1, 7, 3);
+        test_board.setCellValue(2, 0, 3);
+        test_board.setCellValue(2, 1, 4);
+        test_board.setCellValue(2, 3, 1);
+        test_board.setCellValue(2, 4, 6);
+        test_board.setCellValue(2, 6, 9);
+        test_board.setCellValue(2, 8, 2);
+        test_board.setCellValue(3, 2, 9);
+        test_board.setCellValue(3, 3, 2);
+        test_board.setCellValue(3, 5, 8);
+        test_board.setCellValue(3, 6, 1);
+        test_board.setCellValue(3, 7, 7);
+        test_board.setCellValue(3, 8, 5);
+        test_board.setCellValue(4, 4, 4);
+        test_board.setCellValue(5, 1, 3);
+        test_board.setCellValue(5, 2, 5);
+        test_board.setCellValue(5, 3, 6);
+        test_board.setCellValue(5, 5, 1);
+        test_board.setCellValue(6, 3, 3);
+        test_board.setCellValue(6, 6, 5);
+        test_board.setCellValue(6, 7, 9);
+        test_board.setCellValue(6, 8, 4);
+        test_board.setCellValue(7, 0, 5);
+        test_board.setCellValue(7, 1, 1);
+        test_board.setCellValue(7, 2, 3);
+        test_board.setCellValue(7, 3, 4);
+        test_board.setCellValue(7, 4, 8);
+        test_board.setCellValue(7, 8, 7);
+        test_board.setCellValue(8, 0, 6);
+        test_board.setCellValue(8, 1, 9);
+        test_board.setCellValue(8, 3, 7);
+        test_board.setCellValue(8, 4, 5);
+        test_board.setCellValue(8, 5, 2);
+        test_board.setCellValue(8, 8, 3);
+        return test_board;
     }
 
     public static Board makeTestBoard2() { // Expert difficulty in Sudoku.com app
-        Board test_board_2 = new Board();
-        test_board_2.setCellValue(0, 2, 8);
-        test_board_2.setCellValue(0, 5, 5);
-        test_board_2.setCellValue(0, 6, 3);
-        test_board_2.setCellValue(1, 2, 6);
-        test_board_2.setCellValue(1, 5, 2);
-        test_board_2.setCellValue(1, 8, 7);
-        test_board_2.setCellValue(2, 4, 9);
-        test_board_2.setCellValue(2, 7, 8);
-        test_board_2.setCellValue(3, 1, 4);
-        test_board_2.setCellValue(4, 2, 1);
-        test_board_2.setCellValue(4, 3, 9);
-        test_board_2.setCellValue(4, 4, 8);
-        test_board_2.setCellValue(5, 0, 8);
-        test_board_2.setCellValue(5, 3, 6);
-        test_board_2.setCellValue(5, 5, 3);
-        test_board_2.setCellValue(5, 7, 4);
-        test_board_2.setCellValue(6, 2, 5);
-        test_board_2.setCellValue(6, 4, 2);
-        test_board_2.setCellValue(6, 7, 6);
-        test_board_2.setCellValue(7, 0, 9);
-        test_board_2.setCellValue(7, 3, 3);
-        test_board_2.setCellValue(7, 6, 4);
-        test_board_2.setCellValue(7, 8, 5);
-        test_board_2.setCellValue(8, 1, 7);
-        test_board_2.setCellValue(8, 6, 9);
-        return test_board_2;
+        Board test_board = new Board();
+        test_board.setCellValue(0, 2, 8);
+        test_board.setCellValue(0, 5, 5);
+        test_board.setCellValue(0, 6, 3);
+        test_board.setCellValue(1, 2, 6);
+        test_board.setCellValue(1, 5, 2);
+        test_board.setCellValue(1, 8, 7);
+        test_board.setCellValue(2, 4, 9);
+        test_board.setCellValue(2, 7, 8);
+        test_board.setCellValue(3, 1, 4);
+        test_board.setCellValue(4, 2, 1);
+        test_board.setCellValue(4, 3, 9);
+        test_board.setCellValue(4, 4, 8);
+        test_board.setCellValue(5, 0, 8);
+        test_board.setCellValue(5, 3, 6);
+        test_board.setCellValue(5, 5, 3);
+        test_board.setCellValue(5, 7, 4);
+        test_board.setCellValue(6, 2, 5);
+        test_board.setCellValue(6, 4, 2);
+        test_board.setCellValue(6, 7, 6);
+        test_board.setCellValue(7, 0, 9);
+        test_board.setCellValue(7, 3, 3);
+        test_board.setCellValue(7, 6, 4);
+        test_board.setCellValue(7, 8, 5);
+        test_board.setCellValue(8, 1, 7);
+        test_board.setCellValue(8, 6, 9);
+        return test_board;
     }
 
     public static Board makeTestBoard3() { // Master difficulty in Sudoku.com app
-        Board test_board_3 = new Board();
-        test_board_3.setCellValue(0, 1, 2);
-        test_board_3.setCellValue(0, 2, 4);
-        test_board_3.setCellValue(0, 8, 7);
-        test_board_3.setCellValue(1, 1, 6);
-        test_board_3.setCellValue(1, 2, 7);
-        test_board_3.setCellValue(1, 6, 3);
-        test_board_3.setCellValue(1, 8, 2);
-        test_board_3.setCellValue(2, 4, 4);
-        test_board_3.setCellValue(2, 6, 5);
-        test_board_3.setCellValue(3, 2, 6);
-        test_board_3.setCellValue(3, 4, 3);
-        test_board_3.setCellValue(3, 6, 8);
-        test_board_3.setCellValue(3, 7, 5);
-        test_board_3.setCellValue(4, 0, 4);
-        test_board_3.setCellValue(4, 2, 5);
-        test_board_3.setCellValue(4, 4, 8);
-        test_board_3.setCellValue(4, 7, 2);
-        test_board_3.setCellValue(5, 7, 7);
-        test_board_3.setCellValue(6, 0, 7);
-        test_board_3.setCellValue(6, 3, 3);
-        test_board_3.setCellValue(6, 5, 2);
-        test_board_3.setCellValue(7, 1, 1);
-        test_board_3.setCellValue(8, 2, 8);
-        test_board_3.setCellValue(8, 5, 4);
-        test_board_3.setCellValue(8, 8, 9);
-        return test_board_3;
+        Board test_board = new Board();
+        test_board.setCellValue(0, 1, 2);
+        test_board.setCellValue(0, 2, 4);
+        test_board.setCellValue(0, 8, 7);
+        test_board.setCellValue(1, 1, 6);
+        test_board.setCellValue(1, 2, 7);
+        test_board.setCellValue(1, 6, 3);
+        test_board.setCellValue(1, 8, 2);
+        test_board.setCellValue(2, 4, 4);
+        test_board.setCellValue(2, 6, 5);
+        test_board.setCellValue(3, 2, 6);
+        test_board.setCellValue(3, 4, 3);
+        test_board.setCellValue(3, 6, 8);
+        test_board.setCellValue(3, 7, 5);
+        test_board.setCellValue(4, 0, 4);
+        test_board.setCellValue(4, 2, 5);
+        test_board.setCellValue(4, 4, 8);
+        test_board.setCellValue(4, 7, 2);
+        test_board.setCellValue(5, 7, 7);
+        test_board.setCellValue(6, 0, 7);
+        test_board.setCellValue(6, 3, 3);
+        test_board.setCellValue(6, 5, 2);
+        test_board.setCellValue(7, 1, 1);
+        test_board.setCellValue(8, 2, 8);
+        test_board.setCellValue(8, 5, 4);
+        test_board.setCellValue(8, 8, 9);
+        return test_board;
     }
 
     public static Board makeTestBoard4() { // Master difficulty on Sudoku.com app
-        Board test_board_4 = new Board();
-        test_board_4.setCellValue(0, 4, 6);
-        test_board_4.setCellValue(0, 7, 1);
-        test_board_4.setCellValue(1, 1, 1);
-        test_board_4.setCellValue(1, 6, 7);
-        test_board_4.setCellValue(1, 7, 8);
-        test_board_4.setCellValue(2, 0, 6);
-        test_board_4.setCellValue(2, 2, 3);
-        test_board_4.setCellValue(2, 4, 9);
-        test_board_4.setCellValue(3, 0, 7);
-        test_board_4.setCellValue(3, 1, 6);
-        test_board_4.setCellValue(4, 7, 6);
-        test_board_4.setCellValue(5, 4, 8);
-        test_board_4.setCellValue(5, 6, 9);
-        test_board_4.setCellValue(5, 7, 7);
-        test_board_4.setCellValue(5, 8, 4);
-        test_board_4.setCellValue(6, 0, 8);
-        test_board_4.setCellValue(6, 2, 1);
-        test_board_4.setCellValue(6, 3, 9);
-        test_board_4.setCellValue(6, 4, 2);
-        test_board_4.setCellValue(6, 6, 5);
-        test_board_4.setCellValue(7, 1, 5);
-        test_board_4.setCellValue(7, 4, 7);
-        test_board_4.setCellValue(7, 5, 3);
-        test_board_4.setCellValue(8, 1, 4);
-        test_board_4.setCellValue(8, 5, 1);
-        return test_board_4;
+        Board test_board = new Board();
+        test_board.setCellValue(0, 4, 6);
+        test_board.setCellValue(0, 7, 1);
+        test_board.setCellValue(1, 1, 1);
+        test_board.setCellValue(1, 6, 7);
+        test_board.setCellValue(1, 7, 8);
+        test_board.setCellValue(2, 0, 6);
+        test_board.setCellValue(2, 2, 3);
+        test_board.setCellValue(2, 4, 9);
+        test_board.setCellValue(3, 0, 7);
+        test_board.setCellValue(3, 1, 6);
+        test_board.setCellValue(4, 7, 6);
+        test_board.setCellValue(5, 4, 8);
+        test_board.setCellValue(5, 6, 9);
+        test_board.setCellValue(5, 7, 7);
+        test_board.setCellValue(5, 8, 4);
+        test_board.setCellValue(6, 0, 8);
+        test_board.setCellValue(6, 2, 1);
+        test_board.setCellValue(6, 3, 9);
+        test_board.setCellValue(6, 4, 2);
+        test_board.setCellValue(6, 6, 5);
+        test_board.setCellValue(7, 1, 5);
+        test_board.setCellValue(7, 4, 7);
+        test_board.setCellValue(7, 5, 3);
+        test_board.setCellValue(8, 1, 4);
+        test_board.setCellValue(8, 5, 1);
+        return test_board;
     }
+
     public static Board makeTestBoard5() { // Extreme difficulty in Sudoku.com app
-        Board test_board_5 = new Board();
-        test_board_5.setCellValue(0, 0, 1);
-        test_board_5.setCellValue(0, 5, 8);
-        test_board_5.setCellValue(1, 1, 5);
-        test_board_5.setCellValue(1, 4, 4);
-        test_board_5.setCellValue(2, 1, 7);
-        test_board_5.setCellValue(2, 7, 8);
-        test_board_5.setCellValue(2, 8, 2);
-        test_board_5.setCellValue(3, 3, 5);
-        test_board_5.setCellValue(3, 6, 7);
-        test_board_5.setCellValue(3, 8, 1);
-        test_board_5.setCellValue(4, 3, 1);
-        test_board_5.setCellValue(4, 8, 3);
-        test_board_5.setCellValue(5, 3, 9);
-        test_board_5.setCellValue(5, 4, 6);
-        test_board_5.setCellValue(5, 5, 4);
-        test_board_5.setCellValue(6, 0, 6);
-        test_board_5.setCellValue(6, 2, 9);
-        test_board_5.setCellValue(6, 7, 1);
-        test_board_5.setCellValue(7, 2, 4);
-        test_board_5.setCellValue(7, 5, 5);
-        test_board_5.setCellValue(7, 6, 9);
-        test_board_5.setCellValue(8, 6, 6);
-        return test_board_5;
+        Board test_board = new Board();
+        test_board.setCellValue(0, 0, 1);
+        test_board.setCellValue(0, 5, 8);
+        test_board.setCellValue(1, 1, 5);
+        test_board.setCellValue(1, 4, 4);
+        test_board.setCellValue(2, 1, 7);
+        test_board.setCellValue(2, 7, 8);
+        test_board.setCellValue(2, 8, 2);
+        test_board.setCellValue(3, 3, 5);
+        test_board.setCellValue(3, 6, 7);
+        test_board.setCellValue(3, 8, 1);
+        test_board.setCellValue(4, 3, 1);
+        test_board.setCellValue(4, 8, 3);
+        test_board.setCellValue(5, 3, 9);
+        test_board.setCellValue(5, 4, 6);
+        test_board.setCellValue(5, 5, 4);
+        test_board.setCellValue(6, 0, 6);
+        test_board.setCellValue(6, 2, 9);
+        test_board.setCellValue(6, 7, 1);
+        test_board.setCellValue(7, 2, 4);
+        test_board.setCellValue(7, 5, 5);
+        test_board.setCellValue(7, 6, 9);
+        test_board.setCellValue(8, 6, 6);
+        return test_board;
     }
 
     public static Board makeTestBoard6() { // Expert difficulty on Sudoku2Pro App
+        Board test_board = new Board();
+        test_board.setCellValue(0, 1, 6);
+        test_board.setCellValue(0, 6, 4);
+        test_board.setCellValue(1, 2, 8);
+        test_board.setCellValue(1, 4, 1);
+        test_board.setCellValue(1, 7, 2);
+        test_board.setCellValue(2, 0, 1);
+        test_board.setCellValue(2, 2, 4);
+        test_board.setCellValue(2, 6, 8);
+        test_board.setCellValue(2, 7, 9);
+        test_board.setCellValue(2, 8, 7);
+        test_board.setCellValue(3, 0, 4);
+        test_board.setCellValue(3, 2, 2);
+        test_board.setCellValue(3, 5, 6);
+        test_board.setCellValue(3, 6, 1);
+        test_board.setCellValue(3, 8, 9);
+        test_board.setCellValue(5, 5, 1);
+        test_board.setCellValue(5, 6, 2);
+        test_board.setCellValue(6, 1, 8);
+        test_board.setCellValue(6, 4, 2);
+        test_board.setCellValue(6, 5, 7);
+        test_board.setCellValue(6, 6, 9);
+        test_board.setCellValue(7, 3, 8);
+        test_board.setCellValue(7, 4, 6);
+
+        test_board.setCellValue(8, 0, 5);
+        test_board.setCellValue(8, 3, 4);
+        test_board.setCellValue(8, 5, 9);
+        test_board.setCellValue(8, 8, 8);
+        return test_board;
+    }
+
+    public static Board makeTestBoard7() { // Modified from test board 6 so it can have multiple solutions
         Board test_board_6 = new Board();
-        test_board_6.setCellValue(0, 1, 6);
-        test_board_6.setCellValue(0, 6, 4);
-        test_board_6.setCellValue(1, 2, 8);
-        test_board_6.setCellValue(1, 4, 1);
-        test_board_6.setCellValue(1, 7, 2);
         test_board_6.setCellValue(2, 0, 1);
         test_board_6.setCellValue(2, 2, 4);
         test_board_6.setCellValue(2, 6, 8);
@@ -676,38 +584,7 @@ public class Board {
         test_board_6.setCellValue(8, 5, 9);
         test_board_6.setCellValue(8, 8, 8);
         return test_board_6;
-
     }
-
-    /* public Board solveBoard() {
-        if (this.validate_board() == false) {
-            return null;
-        }
-        Board solvedBoard = this;
-
-        while (num_solved_boards < 2) {
-            // TODO: make solvedBoard equal to the solved board of the original board, or null if not solvable
-            // remember that if there is one empty cell in a row, it must be the last remaining digit. same for columns / boxes
-            // remember that if n cells in the same row occupy the same n values, then those n values cannot be in any other cell in the row; same for columns / boxes
-            // maybe I can create a cell class to store the digit value of a cell or NULL if it is not filled in, as well as possible values if it is NULL
-            // I can preemptively narrow things down
-            // can write search algorithm on my board with backtracking, IE trying to solve values directly first
-            // and then guessing and checking other values
-            // Yashu recommends making a representation of a board that is a graph where each cell is a node
-            // and all of its neighbors are its neighboring cells
-            if (solvedBoard.validate_board() == false) {
-                return null;
-            } else return solvedBoard;
-        }
-        if (num_solved_boards == 0) {
-            System.out.println("No possible solutions");
-        }
-        if (num_solved_boards > 1) {
-            System.out.println("Multiple possible solutions");
-        }
-
-    } */
-
 
 
 }
