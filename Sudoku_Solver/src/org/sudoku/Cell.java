@@ -7,18 +7,15 @@ public class Cell {
     int value;
     int row;
     int col;
-    boolean isSolved = false;
-    int numPossibleValues;
+
     int[] possibleValues = new int[9];
 
     public Cell(int row, int col, int value) {
         this.setValue(value);
         this.row = row;
         this.col = col;
-
-        this.initPossibleValues();
-        // this cell is unsolved and we need to initialize possibleValues for it
-
+        this.initPossibleValues(); // remember this will do nothing
+        // if the value is in the range 1 to 9 inclusive and thus getIsSolved() returns true
 
     }
 
@@ -26,9 +23,6 @@ public class Cell {
         this.setRow(other.getRow());
         this.setCol(other.getCol());
         this.setValue(other.getValue());
-        this.setIsSolved(other.getIsSolved());
-
-        this.setNumPossibleValues(other.getNumPossibleValues());
         // System.arraycopy(other.possibleValues, 0, this.possibleValues, 0, 9);
         this.possibleValues = other.possibleValues.clone();
 
@@ -37,8 +31,8 @@ public class Cell {
         return this.value == cell.value
                 && this.row == cell.row
                 && this.col == cell.col
-                && this.isSolved == cell.isSolved
-                && this.numPossibleValues == cell.numPossibleValues
+                && this.getIsSolved() == cell.getIsSolved()
+                && this.getNumPossibleValues() == cell.getNumPossibleValues()
                 && Arrays.equals(this.possibleValues, cell.possibleValues)
                 ;
     }
@@ -54,30 +48,20 @@ public class Cell {
     }
 
     public void initPossibleValues() {
-        if (!(this.isSolved)) {
+        if (!(this.getIsSolved())) {
             for (int i = 0; i < 9; i++) {
                 this.possibleValues[i] = i + 1;
             }
-            this.numPossibleValues = 9;
-        }  /* else {
-            /* for (int i = 0; i < 9; i++) {
-                this.possibleValues[i] = -1;
-            }
-            this.possibleValues[this.value - 1] = value;
-            this.numPossibleValues = 1;
 
-
-            this.solve(this.value);
-            */
+        }
     }
 
     public void removePossibleValue(int value) {
         // if (value >= 1 && value <= 9 && this.possibleValues[value-1] >= 1 && this.possibleValues[value-1] <= 9)
         if (value >= 1 && value <= 9 && this.possibleValues[value-1] == value) {
             this.possibleValues[value-1] = -1;
-            this.numPossibleValues -= 1;
         }
-        if (this.numPossibleValues == 1) {
+        if (this.getNumPossibleValues() == 1) {
             for (int i=0; i<9; i++) {
                 if (this.possibleValues[i] == i+1) {
                     this.setValue(i+1);
@@ -89,15 +73,13 @@ public class Cell {
         return this.value;
     }
     public void setValue(int new_value) {
-        this.value = new_value;
-        if (new_value >= 1 && new_value <= 9) {
 
-            this.isSolved = true;
-            this.numPossibleValues = 1;
+        if (new_value >= 1 && new_value <= 9) {
+            this.value = new_value;
             for (int i=0; i<9; i++) {
                 this.possibleValues[i] = -1;
             }
-            this.possibleValues[this.getValue()-1] = this.getValue();
+            this.possibleValues[new_value-1] = new_value;
         }
     }
     public int[] getPossibleValues() {
@@ -115,10 +97,21 @@ public class Cell {
         this.setValue(this.getFirstPossibleValue());
     }
     public boolean getIsSolved() {
-        return this.isSolved;
+        // return this.isSolved;
+        if (this.value >= 1 && this.value <= 9) {
+            return true;
+        }
+        return false;
     }
     public int getNumPossibleValues() {
-        return this.numPossibleValues;
+        // return this.numPossibleValues;
+        int numValues = 0;
+        for (int i=0; i<9; i++) {
+            if (possibleValues[i] != -1) {
+                numValues += 1;
+            }
+        }
+        return numValues;
     }
     public int getRow() {
         return this.row;
@@ -131,12 +124,6 @@ public class Cell {
     }
     public void setCol(int col) {
         this.col = col;
-    }
-    public void setIsSolved(boolean isSolved) {
-        this.isSolved = isSolved;
-    }
-    public void setNumPossibleValues(int numPossibleValues) {
-        this.numPossibleValues = numPossibleValues;
     }
 
     public boolean isInSameRow(Cell other) {

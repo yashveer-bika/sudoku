@@ -8,7 +8,7 @@ public class Main {
         board.makeBoard();
         System.out.println(board);
          */
-        Board board = Board.makeTestBoard6();
+        Board board = Board.makeTestBoard5();
 
         System.out.println(board);
         System.out.println(Board.original_board.equals(board));
