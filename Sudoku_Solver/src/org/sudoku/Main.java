@@ -8,7 +8,7 @@ public class Main {
         board.makeBoard();
         System.out.println(board);
          */
-        Board board = Board.makeTestBoard7();
+        Board board = Board.makeTestBoard6();
 
         System.out.println(board);
         System.out.println(Board.original_board.equals(board));
@@ -22,9 +22,10 @@ public class Main {
             System.out.println("Original board is null");
         }
 
+        /*
         Board board2 = Board.makeTestBoard6();
         board2.solveBoard();
         System.out.println("TestBoard7 solution = TestBoard6 solution: " + board.equals(board2));
-
+        */
     }
 }
