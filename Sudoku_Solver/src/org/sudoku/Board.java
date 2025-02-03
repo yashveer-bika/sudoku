@@ -1,12 +1,12 @@
 package org.sudoku;
 
 
+import java.util.ArrayList;
 import java.util.Scanner;
 
 
 public class Board {
     Cell[][] board_cells = new Cell[9][9];
-    public boolean is_valid = true;
     static Board original_board = null;
     static Board solved_board = null; // used to represent the solved board if there is only 1 possible, or a solved board if another solution is found
 
@@ -16,6 +16,8 @@ public class Board {
                 board_cells[i][j] = new Cell(i, j, -1);
             }
         }
+        // no need to potentially adjust cell indexing strategy in future using getCell
+        // since init_board can always be done with this way of indexing
     }
 
     public Board() {
@@ -23,32 +25,16 @@ public class Board {
         if (original_board == null) {
             original_board = this;
         }
-        // original_board = this;
     }
 
-    // public Board deepCopy() throws CloneNotSupportedException {
     public Board deepCopy() {
         Board new_board = new Board();
         for (int i=0; i<9; i++) {
             for (int j=0; j<9; j++) {
-                new_board.board_cells[i][j] = new Cell(this.board_cells[i][j]);
+                new_board.board_cells[i][j] = new Cell(this.getCell(i, j));
             }
         }
         return new_board;
-    }
-
-    public int getCellValue(int row, int col) {
-        return board_cells[row][col].getValue();
-    }
-
-    public boolean isCellSolved(int row, int col) {
-        return board_cells[row][col].getIsSolved();
-    }
-
-    public void setCellValue(int row, int col, int new_value) {
-        if (new_value >= 1 && new_value <= 9) {
-            board_cells[row][col].setValue(new_value);
-        }
     }
 
     public void makeBoard() {
@@ -66,228 +52,100 @@ public class Board {
 
     public String toString() {
         String board_string = "";
-        for (int i=0; i<9; i++) {
-            for (int j=0; j<9; j++) {
-                if (getCellValue(i,j) >= 1 && getCellValue(i,j) <= 9) {
-                    board_string += getCellValue(i,j) + " ";
-                }
-                else {
+        for (int i = 0; i < 9; i++) {
+            for (int j = 0; j < 9; j++) {
+                if (getCellValue(i, j) >= 1 && getCellValue(i, j) <= 9) {
+                    board_string += getCellValue(i, j) + " ";
+                } else {
                     board_string += "X ";
                 }
-                if ((j+1) % 3 == 0 && j != 8) {
+                if ((j + 1) % 3 == 0 && j != 8) {
                     board_string += "|| "; // using this to separate the columns of the 9 3x3 boxes, but not at the rightmost edge of the board
                 }
             }
             board_string += '\n'; // newline to indicate new row
-            if ((i+1) % 3 == 0 && i != 8) {
+            if ((i + 1) % 3 == 0 && i != 8) {
                 board_string += "------------------------------" + '\n';
                 // using this to separate the rows of the 9 3x3 boxes, but not at the bottom of the board
             }
         }
         return board_string;
     }
+
+    public Cell getCell(int row, int col) {
+        return board_cells[row][col];
+    }
+
+    public int getCellValue(int row, int col) {
+        return getCell(row, col).getValue();
+    }
+
+    public void setCellValue(int row, int col, int new_value) {
+        if (new_value >= 1 && new_value <= 9) {
+            getCell(row, col).setValue(new_value);
+        }
+    }
+
+    public ArrayList<Cell> getAdjacentCells(Cell cell) {
+        // return an ArrayList of Cells adjacent to the input cell, for use in other methods
+        ArrayList<Cell> adjacentCells = new ArrayList<Cell>();
+        for (int row=0; row<9; row++) {
+            if (row != cell.getRow()) {
+                adjacentCells.add(getCell(row, cell.getCol()));
+            }
+        }
+        for (int col=0; col<9; col++) {
+            if (col != cell.getCol()) {
+                adjacentCells.add(getCell(cell.getRow(), col));
+            }
+        }
+        int[] boxIndices = cell.getBoxIndices();
+        for (int row=boxIndices[0]; row<=boxIndices[1]; row++) {
+            for (int col=boxIndices[2]; col<=boxIndices[3]; col++) {
+                if (!(row == cell.getRow() && col == cell.getCol()) && !(adjacentCells.contains(getCell(row, col)))) {
+                    adjacentCells.add(getCell(row, col));
+                }
+            }
+        }
+        return adjacentCells;
+    }
+
     public boolean validate_cell(Cell cell) {
         if (!(cell.getIsSolved())) {
             return true; // don't want to worry about validating unfilled cells
         }
-        for (int k = 0; k < 9; k++) {
-            if (k != cell.getRow() && cell.getValue() == board_cells[k][cell.getCol()].getValue()) {
+        ArrayList<Cell> adjacentCells =  getAdjacentCells(cell);
+        for (Cell adjacentCell: adjacentCells) {
+            if (adjacentCell.getValue() == cell.getValue()) {
                 return false;
             }
-            if (k != cell.getCol() && cell.getValue() == board_cells[cell.getRow()][k].getValue()) {
-                return false;
-            }
-        }
-        // now to validate the cell box-wise
-        int boxRowWise = (int) (cell.getRow() / 3); // 0 if the first of 3 in a row of boxes, 1 if second, or 2 if third
-        int boxColWise = (int) (cell.getCol() / 3); // 0 if first of 3 in a column of boxes, 1 if second, or 2 if third
-        for (int i=3*boxRowWise; i < 3*boxRowWise + 3; i++) {
-            for (int j=3*boxColWise; j < 3*boxColWise + 3; j++) { // checking all cells in the 3x3 box of the subject cell
-                if (i != cell.getRow() && j != cell.getCol() && board_cells[i][j].getValue() == cell.getValue()) {
-                    return false; // this returns false if any cells in the same 3x3 box as the subject cell have the same value
-                }
-            }
         }
         return true;
     }
 
-    public int numCellsWithPossibleValueInRow(int row, int target_value) { // returns # of cells w/ target_value as a possible value in the specified row of board_cells
-        if (!(target_value >= 1 && target_value <= 9)) return 0;
-        int num_candidate_cells = 0;
-        for (int i=0; i<9; i++) {
-            if (board_cells[row][i].containsPossibleValue(target_value)) {
-                num_candidate_cells += 1;
-            }
-        }
-
-        return num_candidate_cells; // number of cells in a row with target_value as a possible value
-    }
-
-    public boolean samePossibleValueInRow(Cell cell, int target_value) { // returns true if another cell has a possible value of target_value in the same row as the target cell
-        if (!(target_value >= 1 && target_value <= 9)) return false;
-        if (cell.getValue() == target_value) return false;
-        for (int i=0; i<9; i++) {
-            if (board_cells[cell.getRow()][i].containsPossibleValue(target_value)) {
-                return true;
-            }
-        }
-        return false;
-        // this is better than checking numCellsWithPossibleValueInRow == 1
-        // since we only have to check until any cell has that possible value
-        // rather than checking all cells in the row to get a count
-
-        /* if (numCellsWithPossibleValueInRow(cell.getRow(), target_value) == 1) { // this cell is the only one in its row with target_value as a possible value
-            return false;
-        }
-
-
-        return true;
-
-         */
-    }
-
-    public int numCellsWithPossibleValueInCol(int col, int target_value) { // returns # of cells w/ target_value as a possible value in the specified column of board_cells
-        if (!(target_value >= 1 && target_value <= 9)) return 0;
-        int num_candidate_cells = 0;
-        for (int i=0; i<9; i++) {
-            if (board_cells[i][col].containsPossibleValue(target_value)) {
-                num_candidate_cells += 1;
-            }
-        }
-
-        return num_candidate_cells;
-    }
-
-    public boolean samePossibleValueInCol(Cell cell, int target_value) { // returns true if another cell has a possible value of target_value in the same col as the target cell
-        if (!(target_value >= 1 && target_value <= 9)) return false;
-        // if (!(cell.containsPossibleValue(target_value))) return false;
-        if (cell.getValue() == target_value) return false;
-        // now we know that cell.possibleValues[value-1] == value past this point
-        /* if (numCellsWithPossibleValueInCol(cell.getCol(), target_value) == 1) { // this cell is the only one in its column with target_value as a possible value
-            return false;
-        }
-        return true;
-
-         */
-        for (int i=0; i<9; i++) {
-            if (i != cell.getRow() && board_cells[i][cell.getCol()].containsPossibleValue(target_value)) {
-                return true;
-            }
-        }
-        return false;
-        // this is better than using numCellsWithPossibleValueInCol
-        // since we can do short-circuit evaluation
-    }
-
-    public int numCellsWithPossibleValueInCellBox(Cell cell, int target_value) { // # of cells in the same box of board_cells as the given cell w/ target_value as a possible value
-        if (!(target_value >= 1 && target_value <= 9)) return 0;
-        if (cell.getValue() == target_value) return 1;
-        int num_candidate_cells = 0;
-        /*
-        int box_start_row = 3*((int)(cell.getRow() / 3));
-        int box_start_col = 3*((int)(cell.getCol() / 3));
-        for (int i=0; i<3; i++) {
-            for (int j=0; j<3; j++) {
-                if (board_cells[box_start_row+i][box_start_col+j].containsPossibleValue(target_value)) {
-                    num_candidate_cells += 1;
-                }
-            }
-        }
-
-         */
-        int[] box_indices = cell.getBoxIndices();
-        for (int i=box_indices[0]; i<=box_indices[1]; i++) {
-            for (int j=box_indices[2]; j<=box_indices[3]; j++) {
-                if (board_cells[i][j].containsPossibleValue(target_value)) {
-                    num_candidate_cells += 1;
-                    // intentionally not excluding the cell itself since
-                    // we want to know if it's possibleValues contains target_value
-                }
-            }
-        }
-        return num_candidate_cells;
-    }
-
-    public boolean samePossibleValueInCellBox(Cell cell, int target_value) { // returns true if another cell has a possible value of target_value in the same box as the target cell
-        if (!(target_value >= 1 && target_value <= 9)) return false;
-        // if (!(cell.containsPossibleValue(target_value))) return false;
-        if (cell.getValue() == target_value) return false;
-        // now we know that cell.possibleValues[value-1] == value past this point
-
-        /*
-        int box_start_row = 3*((int)(cell.getRow() / 3));
-        int box_start_col = 3*((int)(cell.getCol() / 3));
-        for (int i=0; i<3; i++) {
-            for (int j=0; j<3; j++) {
-                if (board_cells[box_start_row+i][box_start_col+j].containsPossibleValue(target_value)) {
-                    return true;
-                }
-            }
-        }
-
-         */
-        int[] box_indices = cell.getBoxIndices();
-        for (int i=box_indices[0]; i<=box_indices[1]; i++) {
-            for (int j=box_indices[2]; j<=box_indices[3]; j++) {
-                if (board_cells[i][j].containsPossibleValue(target_value)) {
-                    return true;
-                }
-            }
-        }
-        return false;
-
-
-    }
-
-    public int UniquePossibleValue(Cell cell) { // gets a value if the target cell is the only cell in its row, column, or box that has that as a possible value
-        if (cell.getIsSolved()) return cell.getValue();
-        for (int val=1; val<=9; val++) {
-            /*
-            if (!(cell.possibleValues[i] >= 1 && cell.possibleValues[i] <= 9)) continue;
-            if ((!(samePossibleValueInRow(cell, cell.possibleValues[i]))) ||
-                    (!(samePossibleValueInCol(cell, cell.possibleValues[i])))
-                    || (!(samePossibleValueInCellBox(cell, cell.possibleValues[i])))) {
-                return cell.possibleValues[i];
-            }
-
-             */
-            if (!(samePossibleValueInRow(cell, val) || samePossibleValueInCol(cell, val) || samePossibleValueInCellBox(cell, val))) {
-                return val;
-            }
-        }
-
-
-        return -1;
-    }
-
-    public void setPossibleValueIfUnique(Cell cell) { // set a cell to a value if
-        // it is the only cell in a row, column, or box that can have a specific value
-        // returns true if a value was set this way or false otherwise
-        if (cell.getIsSolved()) return; // this cell is already filled in
-        if (UniquePossibleValue(cell) != -1) { // this cell has a possible value that is unique to its row, column, and/or box
-            cell.setValue(UniquePossibleValue(cell));
-        }
-        // if a cell didn't have a unique possible value set this way, it doesn't have a unique possible value for its row, column, or box, so do nothing
-    }
+    // removePossibleValue sets a unique possible value if it exists and narrowCellCandidates checks all adjacent cells
+    // for any cell that has a specified actual value to remove from adjacent cells' possibleValues field
+    // so no need to check for a unique possible value since removePossibleValue takes care of that
 
     public boolean validate_board() {
-        for (int i=0; i<9; i++) {
-            for (int j = 0; j < 9; j++) { // first 3x3 box
-                if (!validate_cell(board_cells[i][j])) {
+        for (int row=0; row<9; row++) {
+            for (int col = 0; col < 9; col++) { // first 3x3 box
+                if (!validate_cell(getCell(row, col))) {
                     return false;
                 }
             }
         }
         return true;
     }
+
     public boolean equals(Board board2) {
         if (board2 == null) {
             if (this == null) return true;
             else return false;
         }
-        for (int i=0; i<9; i++) {
-            for (int j=0; j<9; j++) {
-                if (!(this.board_cells[i][j].equals(board2.board_cells[i][j]))) return false;
+        for (int row=0; row<9; row++) {
+            for (int col=0; col<9; col++) {
+                if (!(this.getCell(row, col).equals(board2.getCell(row, col)))) return false;
             }
         }
         return true;
@@ -297,48 +155,21 @@ public class Board {
         if (cell.getIsSolved()) {
             return;
         }
-
-        for (int k=0; k<9; k++) {
-            if (k != cell.getCol()) {
-                cell.removePossibleValue(board_cells[cell.getRow()][k].getValue());
-            }
-            if (k != cell.getRow()) {
-                cell.removePossibleValue(board_cells[k][cell.getCol()].getValue());
-            }
-        }
-        // narrowing candidates box-wise
-        int[] boxIndices = cell.getBoxIndices();
-        /*
-        int boxRowWise = (int) (cell.getRow() / 3);
-        int boxColWise = (int) (cell.getCol() / 3);
-        for (int i=3*boxRowWise; i < 3*boxRowWise + 3; i++) {
-            for (int j=3*boxColWise; j<3*boxColWise + 3; j++) {
-                if (!(i == cell.getRow() && j == cell.getCol())) {
-                    cell.removePossibleValue(board_cells[i][j].getValue());
-                }
-            }
-        }
-        */
-        for (int i=boxIndices[0]; i<=boxIndices[1]; i++) {
-            for (int j=boxIndices[2]; j<=boxIndices[3]; j++) {
-                if (!(i == cell.getRow() && j == cell.getCol())) {
-                    cell.removePossibleValue(board_cells[i][j].getValue());
-                }
-            }
+        ArrayList<Cell> adjacentCells = getAdjacentCells(cell);
+        for (Cell adjacentCell: adjacentCells) {
+            cell.removePossibleValue(adjacentCell.getValue());
         }
         // removePossibleValues() also takes care of setting a cell to a value if it has only 1 possible value
-
     }
 
     public void narrowBoardCandidates() {
         if (!validate_board()) return;
-        for (int i=0; i<9; i++) {
-            for (int j=0; j<9; j++) {
-                narrowCellCandidates(board_cells[i][j]);
+        for (int row=0; row<9; row++) {
+            for (int col=0; col<9; col++) {
+                narrowCellCandidates(getCell(row, col));
             }
         }
     }
-
 
     public Board boardWithNarrowedCandidates() { // used if I want to have a separate Board object representing an original Board object with narrowBoardCandidates() applied
         if (!validate_board()) return null;
@@ -346,7 +177,6 @@ public class Board {
         narrowedBoard.narrowBoardCandidates();
         return narrowedBoard;
     }
-
 
     public void fullyNarrowCandidates() {
         if (this == null) return;
@@ -357,21 +187,12 @@ public class Board {
             this.narrowBoardCandidates();
             board2.narrowBoardCandidates();
         }
-
-
-    }
-
-
-    public Board boardWithFullyNarrowedCandidates() { // used if I want to have a separate Board object representing an original Board object with fullyNarrowCandidates() applied
-        Board board2 = this.deepCopy();
-        board2.fullyNarrowCandidates();
-        return board2;
     }
 
     public boolean isCompletelySolved() {
         for (int i=0; i<9; i++) {
             for (int j=0; j<9; j++) {
-                if (!(this.board_cells[i][j].getIsSolved())) {
+                if (!(this.getCell(i, j).getIsSolved())) {
                     return false;
                 }
             }
@@ -389,7 +210,7 @@ public class Board {
         else {
             for (int i = 0; i < 9; i++) {
                 for (int j = 0; j < 9; j++) {
-                    if (!(board_cells[i][j].getIsSolved())) {
+                    if (!(getCell(i, j).getIsSolved())) {
                         unsolvedCellIndices[0] = i;
                         unsolvedCellIndices[1] = j;
                         return unsolvedCellIndices;
@@ -401,7 +222,8 @@ public class Board {
     }
 
     public void setFirstPossibleGuess() {
-        board_cells[firstUnsolvedCellIndices()[0]][firstUnsolvedCellIndices()[1]].setFirstPossibleValue();
+
+        this.getCell(firstUnsolvedCellIndices()[0], firstUnsolvedCellIndices()[1]).setFirstPossibleValue();
     }
 
     public Board solveBoard() {
@@ -431,11 +253,11 @@ public class Board {
             Board newBoard = this.deepCopy();
             int[] firstEmptyCellIndices = this.firstUnsolvedCellIndices();
             // this works because it is a block corresponding to the board not being completely solved
-            int firstPossibleGuess = newBoard.board_cells[firstEmptyCellIndices[0]][firstEmptyCellIndices[1]].getFirstPossibleValue();
+            int firstPossibleGuess = newBoard.getCell(firstEmptyCellIndices[0], firstEmptyCellIndices[1]).getFirstPossibleValue();
 
             newBoard.setFirstPossibleGuess();
             if (newBoard.solveBoard() == null) {
-                this.board_cells[firstEmptyCellIndices[0]][firstEmptyCellIndices[1]].removePossibleValue(firstPossibleGuess);
+                this.getCell(firstEmptyCellIndices[0], firstEmptyCellIndices[1]).removePossibleValue(firstPossibleGuess);
                 return this.solveBoard();
             } else return newBoard.solveBoard();
 

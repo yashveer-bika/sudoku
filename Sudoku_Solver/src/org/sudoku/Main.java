@@ -1,26 +1,26 @@
 package org.sudoku;
 
+import java.util.ArrayList;
+
 public class Main {
 
     public static void main(String[] args) {
-        /* Board board = new Board();
-        System.out.println(board);
-        board.makeBoard();
-        System.out.println(board);
-         */
+        // Board board = new Board();
+        // board.makeBoard();
         Board board = Board.makeTestBoard6();
-
         System.out.println(board);
-        System.out.println(Board.original_board.equals(board));
 
-        // Board solvedBoard = board.deepCopy();
-        if (board != null) {
-            board = board.solveBoard();
-            System.out.println(board);
-            System.out.println("Board is completely solved: " + board.isCompletelySolved());
-        } else {
-            System.out.println("Original board is null");
+        /* ArrayList<Cell> adjacentCells = board.getAdjacentCells(board.getCell(0, 0));
+        for (Cell cell: adjacentCells) {
+            System.out.println("row: " + cell.getRow() + ", col: " + cell.getCol() + ", value: " + cell.getValue() + "\n");
         }
+
+         */
+
+        Board solvedBoard = board.deepCopy();
+        solvedBoard = solvedBoard.solveBoard();
+        System.out.println(solvedBoard);
+        System.out.println("Board is completely solved: " + solvedBoard.isCompletelySolved());
 
         /*
         Board board2 = Board.makeTestBoard6();
