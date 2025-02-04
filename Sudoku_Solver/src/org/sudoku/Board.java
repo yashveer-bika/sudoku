@@ -7,43 +7,43 @@ import java.util.Scanner;
 
 public class Board {
     Cell[][] board_cells = new Cell[9][9];
-    static Board original_board = null;
-    static Board solved_board = null; // used to represent the solved board if there is only 1 possible, or a solved board if another solution is found
+    // static Board original_board = null;
+    // static Board solved_board = null; // used to represent the solved board if there is only 1 possible, or a solved board if another solution is found
 
+    static int dim_min = 0; // index of minimum row / col
+    static int dim_max = dim_min + 8; // index of maximum row / col
     public void init_board() {
-        for (int i=0; i<9; i++) {
-            for (int j=0; j<9; j++) {
-                board_cells[i][j] = new Cell(i, j, -1);
+        for (int row=dim_min; row<=dim_max; row++) {
+            for (int col=dim_min; col<=dim_max; col++) {
+                board_cells[row][col] = new Cell(row, col, -1);
             }
         }
         // no need to potentially adjust cell indexing strategy in future using getCell
-        // since init_board can always be done with this way of indexing
+        // since init_board can always be done with this way of indexing regardless
     }
 
     public Board() {
         init_board();
-        if (original_board == null) {
-            original_board = this;
-        }
+
     }
 
     public Board deepCopy() {
         Board new_board = new Board();
-        for (int i=0; i<9; i++) {
-            for (int j=0; j<9; j++) {
-                new_board.board_cells[i][j] = new Cell(this.getCell(i, j));
+        for (int row=dim_min; row<=dim_max; row++) {
+            for (int col=dim_min; col<=dim_max; col++) {
+                new_board.board_cells[row][col] = new Cell(this.getCell(row, col));
             }
         }
         return new_board;
     }
 
     public void makeBoard() {
-        for (int row=0; row<9; row++) {
-            int curr_col = 0;
+        for (int row=dim_min; row<=dim_max; row++) {
+            int curr_col = dim_min;
             Scanner row_reader = new Scanner(System.in);
             System.out.println("Enter the digits separated by a space (for blank cells, input value not in the " +
                     "range [1,9] inclusive, " + "from left to right for row number " + (row+1) + ": ");
-            while (curr_col < 9) {
+            while (curr_col <= dim_max) {
                 setCellValue(row, curr_col, row_reader.nextInt());
                 curr_col++;
             }
@@ -52,19 +52,20 @@ public class Board {
 
     public String toString() {
         String board_string = "";
-        for (int i = 0; i < 9; i++) {
-            for (int j = 0; j < 9; j++) {
-                if (getCellValue(i, j) >= 1 && getCellValue(i, j) <= 9) {
-                    board_string += getCellValue(i, j) + " ";
+        for (int row = dim_min; row <= dim_max; row++) {
+            for (int col = dim_min; col <= dim_max; col++) {
+                if (getCell(row, col).cellValueIsValid()) {
+                    board_string += getCellValue(row, col) + " ";
                 } else {
                     board_string += "X ";
                 }
-                if ((j + 1) % 3 == 0 && j != 8) {
-                    board_string += "|| "; // using this to separate the columns of the 9 3x3 boxes, but not at the rightmost edge of the board
+                if ((col + 1) % 3 == 0 && col != dim_max) {
+                    board_string += "|| ";
+                    // using this to separate the columns of the 9 3x3 boxes, but not at the rightmost edge of the board
                 }
             }
             board_string += '\n'; // newline to indicate new row
-            if ((i + 1) % 3 == 0 && i != 8) {
+            if ((row + 1) % 3 == 0 && row != dim_max) {
                 board_string += "------------------------------" + '\n';
                 // using this to separate the rows of the 9 3x3 boxes, but not at the bottom of the board
             }
@@ -74,6 +75,9 @@ public class Board {
 
     public Cell getCell(int row, int col) {
         return board_cells[row][col];
+        // this is a function in case someone wants to change
+        // the indexing method for calling board_cells[row][col]
+        // such as if they want to do it from 1 through 9 instead of 0 through 8
     }
 
     public int getCellValue(int row, int col) {
@@ -81,20 +85,21 @@ public class Board {
     }
 
     public void setCellValue(int row, int col, int new_value) {
-        if (new_value >= 1 && new_value <= 9) {
-            getCell(row, col).setValue(new_value);
-        }
+        getCell(row, col).setValue(new_value);
     }
 
     public ArrayList<Cell> getAdjacentCells(Cell cell) {
-        // return an ArrayList of Cells adjacent to the input cell, for use in other methods
+        // return an ArrayList of Cells adjacent to the input cell,
+        // IE cells in the same row, column, and/or box
+        // this can be useful in other methods such as
+        // eliminating possible values and checking validity
         ArrayList<Cell> adjacentCells = new ArrayList<Cell>();
-        for (int row=0; row<9; row++) {
+        for (int row=dim_min; row<=dim_max; row++) {
             if (row != cell.getRow()) {
                 adjacentCells.add(getCell(row, cell.getCol()));
             }
         }
-        for (int col=0; col<9; col++) {
+        for (int col=dim_min; col<=dim_max; col++) {
             if (col != cell.getCol()) {
                 adjacentCells.add(getCell(cell.getRow(), col));
             }
@@ -114,7 +119,7 @@ public class Board {
         if (!(cell.getIsSolved())) {
             return true; // don't want to worry about validating unfilled cells
         }
-        ArrayList<Cell> adjacentCells =  getAdjacentCells(cell);
+        ArrayList<Cell> adjacentCells = getAdjacentCells(cell);
         for (Cell adjacentCell: adjacentCells) {
             if (adjacentCell.getValue() == cell.getValue()) {
                 return false;
@@ -128,10 +133,11 @@ public class Board {
     // so no need to check for a unique possible value since removePossibleValue takes care of that
 
     public boolean validate_board() {
-        for (int row=0; row<9; row++) {
-            for (int col = 0; col < 9; col++) { // first 3x3 box
+        for (int row=dim_min; row<=dim_max; row++) {
+            for (int col = dim_min; col <= dim_max; col++) { // first 3x3 box
                 if (!validate_cell(getCell(row, col))) {
                     return false;
+                    // the cell is not valid and thus nor is the board
                 }
             }
         }
@@ -143,8 +149,8 @@ public class Board {
             if (this == null) return true;
             else return false;
         }
-        for (int row=0; row<9; row++) {
-            for (int col=0; col<9; col++) {
+        for (int row=dim_min; row<=dim_max; row++) {
+            for (int col=dim_min; col<=dim_max; col++) {
                 if (!(this.getCell(row, col).equals(board2.getCell(row, col)))) return false;
             }
         }
@@ -164,8 +170,8 @@ public class Board {
 
     public void narrowBoardCandidates() {
         if (!validate_board()) return;
-        for (int row=0; row<9; row++) {
-            for (int col=0; col<9; col++) {
+        for (int row=dim_min; row<=dim_max; row++) {
+            for (int col=dim_min; col<=dim_max; col++) {
                 narrowCellCandidates(getCell(row, col));
             }
         }
@@ -190,9 +196,9 @@ public class Board {
     }
 
     public boolean isCompletelySolved() {
-        for (int i=0; i<9; i++) {
-            for (int j=0; j<9; j++) {
-                if (!(this.getCell(i, j).getIsSolved())) {
+        for (int row=dim_min; row<=dim_max; row++) {
+            for (int col=dim_min; col<=dim_max; col++) {
+                if (!(this.getCell(row, col).getIsSolved())) {
                     return false;
                 }
             }
@@ -200,7 +206,9 @@ public class Board {
         return true;
     }
 
-    public int[] firstUnsolvedCellIndices() {
+    public int[] getFirstUnsolvedCellIndices() {
+        // the indices of the first unsolved cell, for use in
+        // the guessing part of our algorithm
         int[] unsolvedCellIndices = new int[2];
         unsolvedCellIndices[0] = -1;
         unsolvedCellIndices[1] = -1;
@@ -208,11 +216,11 @@ public class Board {
         // so we don't jump into the loop in the first place when the
         // board is completely solved, in order to save computation resources
         else {
-            for (int i = 0; i < 9; i++) {
-                for (int j = 0; j < 9; j++) {
-                    if (!(getCell(i, j).getIsSolved())) {
-                        unsolvedCellIndices[0] = i;
-                        unsolvedCellIndices[1] = j;
+            for (int row=dim_min; row<=dim_max; row++) {
+                for (int col=dim_min; col <=dim_max; col++) {
+                    if (!(getCell(row, col).getIsSolved())) {
+                        unsolvedCellIndices[0] = row;
+                        unsolvedCellIndices[1] = col;
                         return unsolvedCellIndices;
                     }
                 }
@@ -222,36 +230,24 @@ public class Board {
     }
 
     public void setFirstPossibleGuess() {
-
-        this.getCell(firstUnsolvedCellIndices()[0], firstUnsolvedCellIndices()[1]).setFirstPossibleValue();
+        int[] firstUnsolvedCellIndices = getFirstUnsolvedCellIndices();
+        if (firstUnsolvedCellIndices[0] < dim_min || firstUnsolvedCellIndices[0] > dim_max || firstUnsolvedCellIndices[1] < dim_min || firstUnsolvedCellIndices[1] > dim_max) return;
+        this.getCell(firstUnsolvedCellIndices[0], firstUnsolvedCellIndices[1]).setFirstPossibleValue();
     }
 
     public Board solveBoard() {
-        if (!(original_board.validate_board())) {
+        if (!(this.validate_board())) {
             System.out.println("Invalid original board\n");
             return null;
         }
-        if (!(this.validate_board())) {
-            return null;
-        }
-        if (original_board.isCompletelySolved()) {
-            System.out.println("Board already completely solved!\n");
-            return original_board;
-        }
-
         this.fullyNarrowCandidates();
-        if (!(this.validate_board())) return null;
+        if (!(this.validate_board())) return null; // this line is to prevent working on invalid boards
         if (this.isCompletelySolved()) {
-            if (solved_board != null && !(this.equals(solved_board))) {
-                System.out.println("Multiple possible solutions found. Here is one:\n" + this.toString());
-            } else {
-                solved_board = this;
-            }
-            return solved_board;
+            return this;
         }
         else {
             Board newBoard = this.deepCopy();
-            int[] firstEmptyCellIndices = this.firstUnsolvedCellIndices();
+            int[] firstEmptyCellIndices = this.getFirstUnsolvedCellIndices();
             // this works because it is a block corresponding to the board not being completely solved
             int firstPossibleGuess = newBoard.getCell(firstEmptyCellIndices[0], firstEmptyCellIndices[1]).getFirstPossibleValue();
 
@@ -264,6 +260,12 @@ public class Board {
         }
     }
 
+    // ############################################
+
+    // the following methods are to make sample boards
+    // for use in testing our code
+
+    // ############################################
 
     public static Board makeTestBoard1() { // Easy difficulty in Sudoku.com app
         Board test_board = new Board();

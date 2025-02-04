@@ -5,27 +5,16 @@ import java.util.ArrayList;
 public class Main {
 
     public static void main(String[] args) {
-        // Board board = new Board();
-        // board.makeBoard();
-        Board board = Board.makeTestBoard6();
-        System.out.println(board);
 
-        /* ArrayList<Cell> adjacentCells = board.getAdjacentCells(board.getCell(0, 0));
-        for (Cell cell: adjacentCells) {
-            System.out.println("row: " + cell.getRow() + ", col: " + cell.getCol() + ", value: " + cell.getValue() + "\n");
-        }
-
-         */
-
+        Board board = new Board();
+        board.makeBoard();
+        // Board board = Board.makeTestBoard6();
+        System.out.println("Original board: " + "\n" + board + "\n");
+        System.out.println("Board is valid: " + board.validate_board() + "\n");
+        // Board board = Board.makeTestBoard2();
         Board solvedBoard = board.deepCopy();
         solvedBoard = solvedBoard.solveBoard();
-        System.out.println(solvedBoard);
+        System.out.println("Solved board: " + "\n" + solvedBoard + "\n");
         System.out.println("Board is completely solved: " + solvedBoard.isCompletelySolved());
-
-        /*
-        Board board2 = Board.makeTestBoard6();
-        board2.solveBoard();
-        System.out.println("TestBoard7 solution = TestBoard6 solution: " + board.equals(board2));
-        */
     }
 }

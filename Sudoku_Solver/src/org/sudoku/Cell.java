@@ -1,16 +1,18 @@
 package org.sudoku;
 
+import java.sql.Array;
 import java.util.ArrayList;
 
 public class Cell {
-    int value;
+    int value = -1;
     int row;
     int col;
 
-    // int[] possibleValues = new int[9];
-    ArrayList<Integer> possibleValues = new ArrayList<>();
+    static int min_value = 1;
+    static int max_value = 9;
+    // min and max values for a cell
 
-
+    ArrayList<Integer> possibleValues = new ArrayList<Integer>();
     public Cell(int row, int col, int value) {
         this.setValue(value);
         this.row = row;
@@ -36,30 +38,36 @@ public class Cell {
                 ;
     }
 
+    public boolean valueIsValid(int value) {
+        return (value >= min_value && value <= max_value);
+    }
+    public boolean cellValueIsValid() {
+        return (this.getValue() >= min_value && this.getValue() <= max_value);
+    }
+
     public boolean containsPossibleValue(int target_value) {
         if (this.getIsSolved()) {
             if (this.getValue() == target_value) return true;
             else return false;
         }
-        if (!(target_value >= 1 && target_value <= 9)) return false;
-        // if (possibleValues[target_value - 1] == target_value) return true;
+        if (!(valueIsValid(target_value))) return false;
         if (possibleValues.contains(target_value)) return true;
         return false;
     }
 
     public void initPossibleValues() {
         if (!(this.getIsSolved())) {
-            for (int i = 0; i < 9; i++) {
-                // this.possibleValues[i] = i + 1;
-                this.possibleValues.add(i+1);
+            for (int i = min_value; i <= max_value; i++) {
+                this.possibleValues.add(i);
             }
-
+        } else {
+            this.possibleValues.clear();
+            this.possibleValues.add(this.getValue());
         }
     }
 
     public void removePossibleValue(int value) {
-        // if (value >= 1 && value <= 9 && this.possibleValues[value-1] >= 1 && this.possibleValues[value-1] <= 9)
-        if (value >= 1 && value <= 9 && this.possibleValues.contains(value)) {
+        if (value >= min_value && value <= max_value && this.possibleValues.contains(value)) {
             this.possibleValues.remove(Integer.valueOf(value));
         }
         if (this.getNumPossibleValues() == 1) {
@@ -70,9 +78,9 @@ public class Cell {
     public int getValue() {
         return this.value;
     }
-    public void setValue(int new_value) {
 
-        if (new_value >= 1 && new_value <= 9) {
+    public void setValue(int new_value) {
+        if (valueIsValid(new_value)) {
             this.value = new_value;
             this.possibleValues.clear();
             this.possibleValues.add(new_value);
@@ -80,7 +88,6 @@ public class Cell {
     }
 
     public int[] getBoxIndices() {
-        // return null;
         int[] boxIndices = new int[4];
         boxIndices[0] = 3 * ((int) this.row/3); // lower index (above on board) of box's row
         boxIndices[1] = boxIndices[0] + 2; // higher index (below on board) of box's row
@@ -100,14 +107,12 @@ public class Cell {
         this.setValue(this.getFirstPossibleValue());
     }
     public boolean getIsSolved() {
-        // return this.isSolved;
-        if (this.value >= 1 && this.value <= 9) {
+        if (this.value >= min_value && this.value <= max_value) {
             return true;
         }
         return false;
     }
     public int getNumPossibleValues() {
-        // return this.numPossibleValues;
         return this.possibleValues.size();
         // making a function for this in case I want to
         // get the # of possible values with a different method in the future
@@ -136,15 +141,16 @@ public class Cell {
     public boolean isInSameBox(Cell other) {
         int[] thisBoxIndices = this.getBoxIndices();
         int[] otherBoxIndices = other.getBoxIndices();
-        return (thisBoxIndices[0] == otherBoxIndices[0] && thisBoxIndices[2] == otherBoxIndices[2]);
-        // we know that there is a constant difference of 2 between lower and higher box indices so we
+        return (thisBoxIndices[0] == otherBoxIndices[0] &&
+                thisBoxIndices[1] == otherBoxIndices[1] &&
+                thisBoxIndices[2] == otherBoxIndices[2] &&
+                thisBoxIndices[3] == otherBoxIndices[3]);
+        // For now, we know that there is a constant difference of 2 between lower and higher box indices so we
         // only need to compare one set of corresponding indices for row and column
         // if this changes for some use-case in the future,
-        // we can rewrite this method to test for equality between all 4 pairs of indices
+        // we can still use this method. This also improves readability
     }
-
     public boolean isAdjacent(Cell other) {
         return (isInSameRow(other) || isInSameCol(other) || isInSameBox(other));
     }
-
 }
